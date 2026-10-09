@@ -14,8 +14,9 @@ export function formatSingleResult(result: SearchResult, params: SearchParams, i
   const lines = [
     `🔍 Found ${result.listings.length} listings for "${params.query}" on ${result.marketplace}`,
     `📍 Location: ${params.location}`,
-    '',
   ];
+  if (result.note) lines.push(result.note);
+  lines.push('');
 
   for (const listing of cheapestFirst(result.listings)) {
     lines.push(`**${listing.price}** - ${listing.title}`);
@@ -45,6 +46,7 @@ export function formatMultipleResults(results: SearchResult[], params: SearchPar
       lines.push('No listings found');
     } else {
       lines.push(`Found ${result.listings.length} listings:`);
+      if (result.note) lines.push(result.note);
       for (const listing of cheapestFirst(result.listings).slice(0, ALL_MARKETPLACES_PER_SOURCE)) {
         lines.push(`  • **${listing.price}** - ${listing.title}`);
         lines.push(...listingFooter(listing, includeImages, '    '));
