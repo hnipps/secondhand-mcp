@@ -1,4 +1,4 @@
-import { lookupUsCity, stateNameForCode } from '../us-cities.js';
+import { lookupPlace, regionNameForCode } from '../places.js';
 import { LocationCoordinates } from '../../types.js';
 import { LOCATION_DOC_ID, locationVariables } from './queries.js';
 import { fetchGraphQL } from './transport.js';
@@ -16,7 +16,7 @@ export class LocationResolver {
   private cityPageIdCache: Map<string, string> = new Map();
 
   async coordinates(query: string): Promise<LocationCoordinates | null> {
-    const local = lookupUsCity(query);
+    const local = lookupPlace(query);
     if (local) return local;
 
     try {
@@ -130,7 +130,7 @@ export function lookupCandidates(query: string): string[] {
   const typed = asTyped(query);
   const parts = typed.split(',').map((part) => part.trim());
   const city = parts[0];
-  const state = parts.length > 1 ? stateNameForCode(parts[parts.length - 1]) : undefined;
+  const state = parts.length > 1 ? regionNameForCode(parts[parts.length - 1]) : undefined;
   const preferred = state ? `${city}, ${state}` : typed;
   return [...new Set([preferred, city].filter(Boolean))];
 }

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { lookupUsCity, stateNameForCode } from '../src/marketplaces/us-cities.js';
+import { lookupPlace, regionNameForCode } from '../src/marketplaces/places.js';
 
 function resolvedName(query: string): string | null {
-  return lookupUsCity(query)?.name ?? null;
+  return lookupPlace(query)?.name ?? null;
 }
 
 function coords(query: string): [number, number] {
-  const hit = lookupUsCity(query);
+  const hit = lookupPlace(query);
   if (!hit) throw new Error(`expected ${query} to resolve`);
   return [hit.latitude, hit.longitude];
 }
@@ -149,7 +149,7 @@ describe('punctuation and casing', () => {
   it.each([['  AUSTIN,   tx '], ['austin,TX'], ['AUSTIN, TEXAS'], ['aUsTiN']])(
     'ignores case and stray whitespace in %j',
     (query) => {
-      expect(lookupUsCity(query)).toEqual(lookupUsCity('austin, tx'));
+      expect(lookupPlace(query)).toEqual(lookupPlace('austin, tx'));
     }
   );
 });
@@ -173,8 +173,8 @@ describe('refusals', () => {
   );
 });
 
-describe('famous non-US names', () => {
-  it.each([['toronto'], ['london'], ['paris'], ['berlin'], ['moscow'], ['dublin']])(
+describe('famous names outside the index', () => {
+  it.each([['london'], ['paris'], ['berlin'], ['moscow'], ['dublin']])(
     'refuses bare %j so a small US namesake cannot answer for it',
     (query) => {
       expect(resolvedName(query)).toBeNull();
@@ -182,11 +182,20 @@ describe('famous non-US names', () => {
   );
 
   it.each([
+    ['toronto', 'Toronto, ON'],
+    ['vancouver', 'Vancouver, BC'],
+    ['montreal', 'Montréal, QC'],
+  ])('answers bare %j with the Canadian city, which is the largest of that name', (query, expected) => {
+    expect(resolvedName(query)).toBe(expected);
+  });
+
+  it.each([
     ['toronto, oh', 'Toronto, OH'],
     ['toronto ohio', 'Toronto, OH'],
     ['london, ky', 'London, KY'],
     ['paris, tx', 'Paris, TX'],
     ['berlin, nh', 'Berlin, NH'],
+    ['vancouver, wa', 'Vancouver, WA'],
   ])('answers %j once the state pins it down', (query, expected) => {
     expect(resolvedName(query)).toBe(expected);
   });
@@ -197,16 +206,19 @@ describe('famous non-US names', () => {
   });
 });
 
-describe('stateNameForCode', () => {
+describe('regionNameForCode', () => {
   it.each([
     ['nj', 'new jersey'],
     ['NJ', 'new jersey'],
     [' dc ', 'district of columbia'],
+    ['on', 'ontario'],
+    ['BC', 'british columbia'],
+    ['qc', 'quebec'],
   ])('spells out %j', (code, name) => {
-    expect(stateNameForCode(code)).toBe(name);
+    expect(regionNameForCode(code)).toBe(name);
   });
 
-  it.each(['zz', 'new jersey', 'on', ''])('leaves %j alone', (value) => {
-    expect(stateNameForCode(value)).toBeUndefined();
+  it.each(['zz', 'new jersey', ''])('leaves %j alone', (value) => {
+    expect(regionNameForCode(value)).toBeUndefined();
   });
 });

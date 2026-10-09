@@ -86,6 +86,17 @@ describe('location resolution', () => {
     expect(mock).not.toHaveBeenCalled();
   });
 
+  it('resolves Toronto, Ontario offline', async () => {
+    const { mock } = stubFetch(() => json({}));
+
+    const coords = await new FacebookMarketplace().getLocation('Toronto, ON');
+
+    expect(coords?.name).toBe('Toronto, ON');
+    expect(coords?.latitude).toBeCloseTo(43.7, 1);
+    expect(coords?.longitude).toBeCloseTo(-79.42, 1);
+    expect(mock).not.toHaveBeenCalled();
+  });
+
   it('spends a US search on the listings request alone', async () => {
     const { mock, calls } = stubFetch(() => json(searchBody([item()])));
 
@@ -104,12 +115,12 @@ describe('location resolution', () => {
       json(locationBody([locationEdge('City · Ontario', 'Toronto, Ontario', 43.7, -79.42)]))
     );
 
-    const coords = await new FacebookMarketplace().getLocation('toronto');
+    const coords = await new FacebookMarketplace().getLocation('reykjavik');
 
     expect(coords).toEqual({ latitude: 43.7, longitude: -79.42, name: 'Toronto, Ontario' });
     expect(mock).toHaveBeenCalledTimes(1);
     expect(calls[0]).toMatchObject({ url: GRAPHQL_URL, docId: LOCATION_DOC_ID });
-    expect(calls[0].variables.params.query).toBe('toronto');
+    expect(calls[0].variables.params.query).toBe('reykjavik');
     expect(calls[0].variables.params.page_category).toContain('CITY');
   });
 
@@ -123,7 +134,7 @@ describe('location resolution', () => {
       )
     );
 
-    const coords = await new FacebookMarketplace().getLocation('toronto');
+    const coords = await new FacebookMarketplace().getLocation('reykjavik');
 
     expect(coords).toEqual({ latitude: 43.7, longitude: -79.42, name: 'Toronto, Ontario' });
   });
@@ -138,7 +149,7 @@ describe('location resolution', () => {
       )
     );
 
-    const coords = await new FacebookMarketplace().getLocation('toronto');
+    const coords = await new FacebookMarketplace().getLocation('reykjavik');
 
     expect(coords?.latitude).toBe(38.72);
     expect(coords?.longitude).toBe(-9.14);
@@ -168,8 +179,8 @@ describe('location resolution', () => {
     );
     const facebook = new FacebookMarketplace();
 
-    await facebook.getLocation('toronto');
-    await facebook.getLocation('toronto');
+    await facebook.getLocation('reykjavik');
+    await facebook.getLocation('reykjavik');
 
     expect(mock).toHaveBeenCalledTimes(1);
   });
