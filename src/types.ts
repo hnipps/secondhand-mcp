@@ -14,6 +14,8 @@ export interface Listing {
   images?: string[];
   seller?: string;
   condition?: string;
+  brand?: string;
+  size?: string;
   marketplace: string;
   scrapedAt: string;
 }

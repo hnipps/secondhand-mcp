@@ -79,16 +79,20 @@ describe('initializeMarketplaces', () => {
     const registry = await loadRegistry();
     registry.initializeMarketplaces();
 
-    expect(registry.listMarketplaceNames()).toEqual(['facebook', 'ebay', 'depop', 'poshmark']);
+    expect(registry.listMarketplaceNames()).toEqual(['facebook', 'ebay', 'depop', 'poshmark', 'poshmark-ca', 'kijiji']);
     expect(registry.getAllMarketplaces().map((m) => m.displayName)).toEqual([
       'Facebook Marketplace',
       'eBay',
       'Depop',
       'Poshmark',
+      'Poshmark Canada',
+      'Kijiji',
     ]);
     expect(registry.getAllMarketplaces().map((m) => m.requiresAuth)).toEqual([
       false,
       true,
+      false,
+      false,
       false,
       false,
     ]);
@@ -125,7 +129,9 @@ describe('initializeMarketplaces', () => {
     const registry = await loadRegistry({ chrome: null });
     registry.initializeMarketplaces();
 
-    expect(registry.listMarketplaceNames()).toEqual(['facebook', 'ebay']);
+    expect(registry.listMarketplaceNames()).toEqual(['facebook', 'ebay', 'poshmark-ca', 'kijiji']);
+    expect(registry.getMarketplace('poshmark')).toBeUndefined();
+    expect(registry.getMarketplace('poshmark-ca')?.displayName).toBe('Poshmark Canada');
     expect(warnings.filter((w) => w.includes('Chrome/Chromium not found'))).toHaveLength(2);
   });
 
@@ -189,7 +195,7 @@ describe('registerMarketplace', () => {
     const replacement = stub('ebay');
     registry.registerMarketplace(replacement);
 
-    expect(registry.listMarketplaceNames()).toEqual(['facebook', 'ebay', 'depop', 'poshmark']);
+    expect(registry.listMarketplaceNames()).toEqual(['facebook', 'ebay', 'depop', 'poshmark', 'poshmark-ca', 'kijiji']);
     expect(registry.getMarketplace('ebay')).toBe(replacement);
     expect(registry.getAllMarketplaces()[1]).toBe(replacement);
   });

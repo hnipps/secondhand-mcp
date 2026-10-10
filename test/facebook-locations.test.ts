@@ -8,6 +8,7 @@ describe('lookupCandidates', () => {
     ['Montclair, NJ', ['montclair, new jersey', 'montclair']],
     ['Montclair, New Jersey', ['montclair, new jersey', 'montclair']],
     ['Old Toronto, Ontario', ['old toronto, ontario', 'old toronto']],
+    ['Toronto, ON', ['toronto, ontario', 'toronto']],
     ['Austin', ['austin']],
   ])('asks for %j as %j', (query, expected) => {
     expect(lookupCandidates(query)).toEqual(expected);

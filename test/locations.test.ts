@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import allCities from 'all-the-cities';
-import { lookupUsCity } from '../src/marketplaces/us-cities.js';
+import { lookupPlace } from '../src/marketplaces/places.js';
 
 function resolvedName(query: string): string | null {
-  return lookupUsCity(query)?.name ?? null;
+  return lookupPlace(query)?.name ?? null;
 }
 
-describe('lookupUsCity', () => {
+describe('lookupPlace', () => {
   it.each([
     ['austin', 'Austin, TX'],
     ['portland', 'Portland, OR'],
@@ -74,12 +74,19 @@ describe('lookupUsCity', () => {
     }
   );
 
-  it.each([['toronto'], ['london'], ['paris'], ['berlin'], ['manchester'], ['vancouver']])(
-    'does not answer the famous non-US name %j with a small US namesake',
+  it.each([['london'], ['paris'], ['berlin'], ['manchester']])(
+    'does not answer the famous non-indexed name %j with a small US namesake',
     (query) => {
       expect(resolvedName(query)).toBeNull();
     }
   );
+
+  it.each([
+    ['toronto', 'Toronto, ON'],
+    ['vancouver', 'Vancouver, BC'],
+  ])('answers bare %j with the larger Canadian city', (query, expected) => {
+    expect(resolvedName(query)).toBe(expected);
+  });
 
   it.each([
     ['toronto, oh', 'Toronto, OH'],
@@ -96,7 +103,7 @@ describe('lookupUsCity', () => {
       .slice(0, 200);
 
     const misses = largest.filter((c) => {
-      const r = lookupUsCity(`${c.name}, ${c.adminCode}`);
+      const r = lookupPlace(`${c.name}, ${c.adminCode}`);
       return (
         !r ||
         Math.abs(r.latitude - c.loc.coordinates[1]) >= 0.5 ||

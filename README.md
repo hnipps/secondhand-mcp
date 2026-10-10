@@ -3,7 +3,7 @@
 
 # Secondhand MCP
 
-A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that lets AI assistants search secondhand marketplaces. Search Facebook Marketplace, eBay, Depop, and Poshmark for used and secondhand items — filter by price, category, condition, size, and color, then get full listing details with photos, descriptions, and seller info.
+A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that lets AI assistants search secondhand marketplaces. Search Facebook Marketplace, eBay, Depop, Poshmark, and Kijiji for used and secondhand items. Filter by price, category, condition, size, and color, then get full listing details with photos, descriptions, and seller info.
 
 Works with Claude Desktop, Claude Code, Cursor, and other clients that run MCP servers locally.
 
@@ -24,10 +24,12 @@ Works with Claude Desktop, Claude Code, Cursor, and other clients that run MCP s
 
 | Marketplace | Auth Required | Notes |
 |-------------|---------------|-------|
-| Facebook Marketplace | No | Location-based search |
-| eBay | Yes (API keys) | Official Browse API |
+| Facebook Marketplace | No | Location-based search, including Canadian cities |
+| Kijiji | No | Canadian classifieds. City and province, or all of Canada |
+| eBay | Yes (API keys) | Official Browse API. Set `EBAY_MARKETPLACE_ID` to `EBAY_CA` for ebay.ca |
 | Depop | No | Requires Chrome installed |
-| Poshmark | No | Requires Chrome installed |
+| Poshmark | No | US site. Requires Chrome installed |
+| Poshmark Canada | No | poshmark.ca. CAD, ships across Canada. No browser |
 
 ## Setup
 
@@ -95,7 +97,7 @@ By default all marketplaces are enabled. To limit which are active, set the `MAR
 }
 ```
 
-Valid values: `facebook`, `ebay`, `depop`, `poshmark`
+Valid values: `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, `poshmark-ca`
 
 ### eBay API Keys
 
@@ -141,15 +143,15 @@ Search for items across marketplaces.
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `query` | Yes | | Search terms |
-| `marketplace` | No | `facebook` | `facebook`, `ebay`, `depop`, `poshmark`, or `all` |
-| `location` | No | `san francisco` | City to search in (Facebook only) |
+| `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, `poshmark-ca`, or `all` |
+| `location` | No | `san francisco` | City for Facebook and Kijiji. US: `City, ST` (`Austin, TX`). Canada: `City, PR` (`Toronto, ON`, `Vancouver, BC`). Kijiji searches all of Canada when the place is not in Canada, and says so. |
 | `radiusMiles` | No | `25` | Search radius in miles, up to 500 (Facebook only) |
 | `maxPrice` | No | | Maximum price |
 | `minPrice` | No | | Minimum price |
 | `limit` | No | `20` | Max results |
 | `showSold` | No | `false` | Include sold items (Facebook only) |
 | `includeImages` | No | `false` | Include image URLs in output |
-| `sort` | No | `relevance` | Sort order (Depop, Poshmark): `relevance`, `newest`, `most_popular`, `price_low_to_high`, `price_high_to_low` |
+| `sort` | No | `relevance` | Sort order (Depop, Poshmark, Kijiji): `relevance`, `newest`, `most_popular`, `price_low_to_high`, `price_high_to_low`. Kijiji ignores `most_popular`. |
 | `condition` | No | | Item condition. eBay: `new`, `like_new`, `good`, `fair`. Depop: `new`, `like_new`, `excellent`, `good`, `fair`, `used`. Poshmark: `new` (NWT), `like_new` (NWOT), `good`, `fair` |
 | `category` | No | | Product category. Depop: `tops`, `bottoms`, `dresses`, `coats-jackets`, `footwear`, `accessories`, `bags`, `jewellery`, `activewear`, `swimwear`. Poshmark: `Jackets_&_Coats`, `Dresses`, `Shoes`, `Accessories`, etc. |
 | `brand` | No | | Brand filter (Poshmark only): e.g. `"Nike"`, `"Levi's"`, `"Gucci"` |
@@ -159,14 +161,14 @@ Search for items across marketplaces.
 
 **Data returned per marketplace:**
 
-| Field | Facebook | eBay | Depop | Poshmark |
-|-------|----------|------|-------|----------|
-| Title | Yes | Yes | Yes | Yes |
-| Price | Yes | Yes | Yes | Yes |
-| Location | City | City, State | — | — |
-| Condition | — | Yes | — | — |
-| Photo count | 1 thumbnail | 1 thumbnail | 1 thumbnail | 1 thumbnail |
-| Seller | Yes | Yes | — | — |
+| Field | Facebook | Kijiji | eBay | Depop | Poshmark |
+|-------|----------|--------|------|-------|----------|
+| Title | Yes | Yes | Yes | Yes | Yes |
+| Price | Yes | Yes | Yes | Yes | Yes |
+| Location | City | City | City, State | — | — |
+| Condition | — | When the ad has one | Yes | — | — |
+| Photo count | 1 thumbnail | 1 thumbnail | 1 thumbnail | 1 thumbnail | 1 thumbnail |
+| Seller | Yes | — | Yes | — | — |
 
 ### `get_listing_details`
 
@@ -175,18 +177,18 @@ Get full details for a specific listing using an ID from search results.
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `listingId` | Yes | | Listing ID from search results |
-| `marketplace` | No | `facebook` | `facebook`, `ebay`, `depop`, or `poshmark` |
+| `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, or `poshmark-ca` |
 
 **Data returned per marketplace:**
 
-| Field | Facebook | eBay | Depop | Poshmark |
-|-------|----------|------|-------|----------|
-| Description | Yes | Yes | Yes | Yes |
-| All photos | Yes | Yes | Yes | Yes |
-| Location | City | City, State, Country | — | — |
-| Seller | Name | Username | Username | Username |
-| Delivery types | Yes | — | — | — |
-| Shipping | Yes/No | Service codes | Yes/No | Always included |
+| Field | Facebook | Kijiji | eBay | Depop | Poshmark |
+|-------|----------|--------|------|-------|----------|
+| Description | Yes | Yes | Yes | Yes | Yes |
+| All photos | Yes | Yes | Yes | Yes | Yes |
+| Location | City | City | City, State, Country | — | — |
+| Seller | Name | — | Username | Username | Username |
+| Delivery types | Yes | — | — | — | — |
+| Shipping | Yes/No | — | Service codes | Yes/No | Always included |
 
 ### `list_marketplaces`
 
@@ -203,13 +205,17 @@ Useful for research-style clients that expect these standard tool names; for fil
 
 ## How It Works
 
-**Facebook Marketplace** — Searches listings by location, radius, price, and query. Resolves city names to coordinates. No login or browser needed. Facebook serves non-browser callers a gated version of its search API from time to time (a single result with more pages behind it, or stubs with no listing inside); when that happens the server reads the logged-out search page instead, which still carries a full first page of results.
+**Facebook Marketplace** searches listings by location, radius, price, and query. City names in the US and Canada resolve offline. No login or browser needed. Facebook serves non-browser callers a gated version of its search API from time to time (a single result with more pages behind it, or stubs with no listing inside). When that happens the server reads the logged-out search page instead, which still carries a full first page of results.
 
-**eBay** — Uses the official eBay Browse API with OAuth 2.0 client credentials. Tokens are cached and auto-refreshed. The target regional marketplace is controlled by `EBAY_MARKETPLACE_ID` (default: `EBAY_US`).
+**Kijiji** searches kijiji.ca buy-and-sell ads. Pass a Canadian city and province, such as `Toronto, ON`. A place Kijiji does not cover, including the default San Francisco, returns Canada-wide results and a note that says so. Prices are Canadian dollars. No login or browser needed.
 
-**Depop** — Uses a headless browser to search listings with support for category, condition, size, and color filters. The browser instance is shared across requests.
+**eBay** uses the official eBay Browse API with OAuth 2.0 client credentials. Tokens are cached and auto-refreshed. The target regional marketplace is controlled by `EBAY_MARKETPLACE_ID` (default: `EBAY_US`). Use `EBAY_CA` for ebay.ca.
 
-**Poshmark** — Uses a headless browser to search listings with support for condition, size, color, sort, and price filters. Poshmark is not location-based — all items ship nationally.
+**Depop** uses a headless browser to search listings with support for category, condition, size, and color filters. The browser instance is shared across requests.
+
+**Poshmark** uses a headless browser to search poshmark.com. It supports condition, size, color, sort, and price filters. A Canadian location on this marketplace searches poshmark.ca instead, but the marketplace is registered only when Chrome or Chromium is installed.
+
+**Poshmark Canada** (`poshmark-ca`) searches poshmark.ca without a browser. Prices are CAD. Items ship across Canada, so a city does not narrow the results. Pass `marketplace` as `poshmark-ca`.
 
 ## Development
 
@@ -229,9 +235,11 @@ npm run build
 ## Limitations
 
 - **Facebook**: May break if Facebook changes their frontend
+- **Kijiji**: May break if Kijiji changes the search page. Covers Canada only.
 - **eBay**: Requires developer API keys (free tier available)
 - **Depop**: Requires Chrome/Chromium installed; slower than Facebook/eBay (~5s per search)
-- **Poshmark**: Requires Chrome/Chromium installed; no official API so relies on page scraping
+- **Poshmark**: US search requires Chrome/Chromium. No official API, so the US site is page scraping.
+- **Poshmark Canada**: No browser. May break if poshmark.ca changes `/vm-rest/posts`.
 - **Rate limiting**: Don't make too many requests too quickly
 
 ## License

@@ -72,7 +72,7 @@ describe('facebook proxy dispatcher', () => {
       )
     );
 
-    await new Facebook().getLocation('toronto');
+    await new Facebook().getLocation('reykjavik');
 
     const dispatcher = (calls[0].init as any).dispatcher;
     expect(dispatcher?.proxyUrl).toBe('http://user:pass@proxy.test:7000');
@@ -82,7 +82,7 @@ describe('facebook proxy dispatcher', () => {
     const Facebook = await loadFacebook(undefined);
     const { calls } = stubFetch(() => json(locationBody([])));
 
-    await new Facebook().getLocation('toronto');
+    await new Facebook().getLocation('reykjavik');
 
     expect((calls[0].init as any).dispatcher).toBeUndefined();
   });
@@ -121,7 +121,7 @@ describe('facebook location naming', () => {
       )
     );
 
-    const coords = await new FacebookMarketplace().getLocation('toronto');
+    const coords = await new FacebookMarketplace().getLocation('reykjavik');
 
     expect(coords).toEqual({ latitude: 38.72, longitude: -9.14, name: 'Rua Toronto, Lisboa' });
   });

@@ -18,7 +18,7 @@ type AnnotatedTool = Tool & {
 export const tools: AnnotatedTool[] = [
   {
     name: 'search_marketplace',
-    description: `Search live listings on secondhand marketplaces by keyword. Marketplaces: ${listMarketplaceNames().join(', ')}. Returns up to \`limit\` listings with id, title, price, location, seller and a thumbnail; call get_listing_details with an id for the description, every photo and shipping. Requirements: Facebook Marketplace needs no credentials but is local, so pass \`location\` as "City, ST"; eBay needs EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in the server environment; Depop and Poshmark need Chrome or Chromium on the machine. Behavior: read-only, no login, no purchases. Facebook may rate-limit repeated searches from one IP, and results for a query are cached for 90 seconds. Errors: a marketplace that fails returns success:false with the reason instead of throwing; an unknown marketplace name lists the valid ones; an empty result usually means the query was too specific, so widen the keywords or drop a price bound before concluding nothing exists. Not for: buying, messaging sellers, saved searches, or new-retail catalogs.`,
+    description: `Search live listings on secondhand marketplaces by keyword. Marketplaces: ${listMarketplaceNames().join(', ')}. Returns up to \`limit\` listings with id, title, price, location, seller and a thumbnail; call get_listing_details with an id for the description, every photo and shipping. Requirements: Facebook Marketplace needs no credentials but is local, so pass \`location\` as "City, ST" or, in Canada, "City, PR"; Kijiji is Canada-only and uses the same location string; eBay needs EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in the server environment; Depop and Poshmark US need Chrome or Chromium on the machine. Poshmark Canada is \`poshmark-ca\`. It searches poshmark.ca in CAD with no browser, and a city does not narrow it. Behavior: read-only, no login, no purchases. Facebook may rate-limit repeated searches from one IP, and results for a query are cached for 90 seconds. A Kijiji location outside Canada returns Canada-wide results and says so. Errors: a marketplace that fails returns success:false with the reason instead of throwing; an unknown marketplace name lists the valid ones; an empty result usually means the query was too specific, so widen the keywords or drop a price bound before concluding nothing exists. Not for: buying, messaging sellers, saved searches, or new-retail catalogs.`,
     annotations: { title: 'Search Marketplace', ...READ_ONLY },
     inputSchema: {
       type: 'object',
@@ -34,7 +34,7 @@ export const tools: AnnotatedTool[] = [
         },
         location: {
           type: 'string',
-          description: 'City and state for Facebook Marketplace searches, as "City, ST" — e.g. "Austin, TX", "Portland, OR". Resolve neighborhoods, ZIP codes, metro areas and "near me" to a city and state before calling; a bare city name is ambiguous and may return the wrong state. Non-US: pass city and country. Facebook only — other marketplaces ignore it.',
+          description: 'City and region. Facebook and Kijiji: "City, ST" in the US ("Austin, TX") or "City, PR" in Canada ("Toronto, ON", "Vancouver, BC"). Resolve neighborhoods, postal codes, metro areas and "near me" to a city and region before calling. A bare city name is ambiguous. Kijiji ignores a location it does not cover and searches Canada instead. For Poshmark Canada, pass marketplace "poshmark-ca". That search ignores the city. A Canadian location on marketplace "poshmark" also searches poshmark.ca when that marketplace is registered. Depop and eBay ignore location.',
           default: 'san francisco'
         },
         radiusMiles: {
@@ -72,7 +72,7 @@ export const tools: AnnotatedTool[] = [
         },
         sort: {
           type: 'string',
-          description: 'Sort order (Depop, Poshmark). Options: relevance, newest, most_popular, price_low_to_high, price_high_to_low',
+          description: 'Sort order (Depop, Poshmark, Kijiji). Options: relevance, newest, most_popular, price_low_to_high, price_high_to_low. Kijiji has no most_popular sort and ignores it.',
           default: 'relevance'
         },
         condition: {

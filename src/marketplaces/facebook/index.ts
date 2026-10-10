@@ -59,7 +59,7 @@ export class FacebookMarketplace extends BaseMarketplace {
       const coords = await this.locations.coordinates(location);
       if (!coords) {
         return this.createError(
-          `Could not find location "${location}". Try a major city name like "san francisco", "nyc", or "chicago".`
+          `Could not find location "${location}". Try a major city name like "san francisco", "toronto", or "chicago".`
         );
       }
 
