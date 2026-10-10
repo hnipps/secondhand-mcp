@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { canadaArea, matchKijijiArea, parseLocationTree } from '../src/marketplaces/kijiji/locations.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { canadaArea, matchKijijiArea, matchKijijiAreas, parseLocationTree } from '../src/marketplaces/kijiji/locations.js';
 import { detailsFromHtml, listingsFromSearchHtml } from '../src/marketplaces/kijiji/parse.js';
-import { searchUrl } from '../src/marketplaces/kijiji/index.js';
+import { KijijiMarketplace, searchUrl } from '../src/marketplaces/kijiji/index.js';
 
 const TREE = `var locationsTree = ${JSON.stringify({
   id: 0,
@@ -72,7 +72,7 @@ const TREE = `var locationsTree = ${JSON.stringify({
 
 const AREAS = parseLocationTree(TREE);
 
-function listing(id: string, title: string, amount: number | null) {
+function listing(id: string, title: string, amount: number | null, extra: Record<string, unknown> = {}) {
   return {
     __typename: 'StandardListing',
     id,
@@ -81,14 +81,28 @@ function listing(id: string, title: string, amount: number | null) {
     url: `https://www.kijiji.ca/v-laptops/city-of-toronto/${id}`,
     imageUrls: [`https://media.kijiji.ca/${id}.jpg`],
     location: { name: 'Toronto', address: 'Toronto, ON M5V' },
+    activationDate: '2026-06-18T23:06:12.000Z',
     price:
       amount == null
         ? { __typename: 'NonAmountPrice', type: 'CONTACT' }
         : { __typename: 'StandardAmountPrice', type: 'FIXED', amount, currency: 'CAD' },
-    attributes: { all: [{ canonicalName: 'condition', canonicalValues: ['usedgood'] }] },
+    attributes: {
+      all: [
+        { canonicalName: 'condition', canonicalValues: ['usedgood'] },
+        { canonicalName: 'forsaleby', canonicalValues: ['ownr'] },
+      ],
+    },
+    ...extra,
   };
 }
 
+function pageHtml(rows: ReturnType<typeof listing>[]): string {
+  const apollo: Record<string, unknown> = {};
+  for (const row of rows) apollo[`StandardListing:${row.id}`] = row;
+  return `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+    props: { pageProps: { __APOLLO_STATE__: apollo } },
+  })}</script>`;
+}
 function searchHtml(): string {
   const apollo = {
     ROOT_QUERY: {
@@ -129,6 +143,12 @@ describe('Kijiji areas', () => {
     expect(matchKijijiArea(AREAS, 'Ontario')).toBeNull();
     expect(canadaArea(AREAS)).toMatchObject({ id: 0, slug: 'canada' });
   });
+
+  it('returns both Ontario areas when the province is the query', () => {
+    expect(matchKijijiAreas(AREAS, 'Ontario').map((area) => area.id)).toEqual([9004, 100009004]);
+    expect(matchKijijiAreas(AREAS, 'Toronto, ON').map((area) => area.id)).toEqual([1700273]);
+    expect(matchKijijiAreas(AREAS, 'British Columbia').map((area) => area.id)).toEqual([9007]);
+  });
 });
 
 describe('Kijiji pages', () => {
@@ -140,6 +160,61 @@ describe('Kijiji pages', () => {
     ]);
     expect(listings[0].priceNumeric).toBe(300);
     expect(listings[0].url).toBe('https://www.kijiji.ca/v-laptops/city-of-toronto/1');
+    expect(listings[0].postedAt).toBe('2026-06-18T23:06:12.000Z');
+    expect(listings[0].dealer).toBe(false);
+    expect(listings[0].offerType).toBeUndefined();
+    expect(listings[0].shipping).toBeUndefined();
+  });
+
+  it('reads a dealer flag and an explicit shipping flag, and ignores local delivery', () => {
+    const dealer = listing('9', 'Shop laptop', 10000, {
+      attributes: {
+        all: [
+          { canonicalName: 'forsaleby', canonicalValues: ['delr'] },
+          { canonicalName: 'fulfillment', canonicalValues: ['delivery', 'curbside'] },
+        ],
+      },
+      flags: { shippedBySeller: null },
+    });
+    const shipper = listing('8', 'Ships', 20000, { flags: { shippedBySeller: true } });
+    const html = pageHtml([dealer, shipper]);
+    const listings = listingsFromSearchHtml(html, '2026-10-09T00:00:00.000Z');
+    expect(listings.find((item) => item.id === '9')).toMatchObject({ dealer: true });
+    expect(listings.find((item) => item.id === '9')?.shipping).toBeUndefined();
+    expect(listings.find((item) => item.id === '8')).toMatchObject({ shipping: true, dealer: false });
+  });
+
+  it('reads the seller, offer type, and shipping attribute from a listing page', () => {
+    const raw = listing('2', 'Wanted laptop', null, {
+      type: 'WANTED',
+      posterInfo: { posterId: '1020479423' },
+      flags: { isFromDealer: false },
+      attributes: {
+        all: [
+          { canonicalName: 'forsaleby', canonicalValues: ['ownr'] },
+          { canonicalName: 'shipping', canonicalValues: ['false'] },
+          { canonicalName: 'fulfillment', canonicalValues: ['delivery'] },
+        ],
+      },
+    });
+    const html = `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+      props: {
+        pageProps: {
+          __APOLLO_STATE__: {
+            'StandardListing:2': raw,
+            'StandardProfileV2:1020479423': { __typename: 'StandardProfileV2', name: 'Omari' },
+          },
+        },
+      },
+    })}</script>`;
+    expect(detailsFromHtml(html, '2')).toMatchObject({
+      id: '2',
+      seller: 'Omari',
+      offerType: 'wanted',
+      dealer: false,
+      isShippingOffered: false,
+      postedAt: '2026-06-18T23:06:12.000Z',
+    });
   });
 
   it('reads a listing page by id', () => {
@@ -159,5 +234,66 @@ describe('Kijiji pages', () => {
     ).toBe(
       'https://www.kijiji.ca/b-buy-sell/city-of-toronto/macbook-pro/page-2/k0c10l1700273?price=50__400&sort=priceAsc'
     );
+  });
+});
+
+describe('Kijiji search', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function htmlResponse(body: string) {
+    return { ok: true, status: 200, text: async () => body };
+  }
+
+  it('searches both Ontario areas and does not fall back to Canada', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', async (input: string) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes('j-locations')) return htmlResponse(TREE);
+      if (url.includes('l9004') && !url.includes('l100009004')) return htmlResponse(pageHtml([listing('a', 'West', 10000)]));
+      if (url.includes('l100009004')) return htmlResponse(pageHtml([listing('b', 'East', 20000)]));
+      if (url.includes('l0')) return htmlResponse(pageHtml([listing('c', 'Canada', 30000)]));
+      throw new Error(url);
+    });
+
+    const ontario = await new KijijiMarketplace().search({ query: 'laptop', location: 'Ontario', limit: 5 });
+    expect(ontario.listings.map((item) => item.id).sort()).toEqual(['a', 'b']);
+    expect(ontario.note).toBe('Kijiji splits Ontario into Ontario (A - L) and Ontario (M - Z). These results cover each of them.');
+    expect(urls.some((url) => /l0(\?|$|\/)/.test(url) || url.includes('k0c10l0'))).toBe(false);
+
+    const nowhere = await new KijijiMarketplace().search({ query: 'laptop', location: 'Narnia', limit: 5 });
+    expect(nowhere.note).toContain('Canada');
+    expect(nowhere.listings.map((item) => item.id)).toEqual(['c']);
+  });
+
+  it('drops dealer ads and ads that do not say they ship', async () => {
+    vi.stubGlobal('fetch', async (input: string) => {
+      const url = String(input);
+      if (url.includes('j-locations')) return htmlResponse(TREE);
+      return htmlResponse(
+        pageHtml([
+          listing('owner', 'Owner', 10000),
+          listing('dealer', 'Dealer', 20000, {
+            attributes: { all: [{ canonicalName: 'forsaleby', canonicalValues: ['delr'] }] },
+          }),
+          listing('ship', 'Ship', 30000, { flags: { shippedBySeller: true } }),
+        ])
+      );
+    });
+
+    const owners = await new KijijiMarketplace().search({ query: 'laptop', location: 'Toronto, ON', dealer: false, limit: 10 });
+    expect(owners.listings.map((item) => item.id).sort()).toEqual(['owner', 'ship']);
+    expect(owners.note).toContain('Dealer ads are left out.');
+
+    const shipped = await new KijijiMarketplace().search({
+      query: 'laptop',
+      location: 'Toronto, ON',
+      shipping: true,
+      limit: 10,
+    });
+    expect(shipped.listings.map((item) => item.id)).toEqual(['ship']);
+    expect(shipped.note).toContain('local delivery is not shipping');
   });
 });

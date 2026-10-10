@@ -18,7 +18,7 @@ type AnnotatedTool = Tool & {
 export const tools: AnnotatedTool[] = [
   {
     name: 'search_marketplace',
-    description: `Search live listings on secondhand marketplaces by keyword. Marketplaces: ${listMarketplaceNames().join(', ')}. Returns up to \`limit\` listings with id, title, price, location, seller and a thumbnail; call get_listing_details with an id for the description, every photo and shipping. Requirements: Facebook Marketplace needs no credentials but is local, so pass \`location\` as "City, ST" or, in Canada, "City, PR"; Kijiji is Canada-only and uses the same location string; eBay needs EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in the server environment; Depop and Poshmark US need Chrome or Chromium on the machine. Poshmark Canada is \`poshmark-ca\`. It searches poshmark.ca in CAD with no browser, and a city does not narrow it. Behavior: read-only, no login, no purchases. Facebook may rate-limit repeated searches from one IP, and results for a query are cached for 90 seconds. A Kijiji location outside Canada returns Canada-wide results and says so. Errors: a marketplace that fails returns success:false with the reason instead of throwing; an unknown marketplace name lists the valid ones; an empty result usually means the query was too specific, so widen the keywords or drop a price bound before concluding nothing exists. Not for: buying, messaging sellers, saved searches, or new-retail catalogs.`,
+    description: `Search live listings on secondhand marketplaces by keyword. Marketplaces: ${listMarketplaceNames().join(', ')}. Returns up to \`limit\` listings with id, title, price, location, seller and a thumbnail; call get_listing_details with an id for the description, every photo and shipping. Requirements: Facebook Marketplace needs no credentials but is local, so pass \`location\` as "City, ST" or, in Canada, "City, PR"; Kijiji is Canada-only and uses the same location string; eBay needs EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in the server environment; Depop and Poshmark US need Chrome or Chromium on the machine. Poshmark Canada is \`poshmark-ca\`. It searches poshmark.ca in CAD with no browser, and a city does not narrow it. Search results include the post date. They do not include a city, a shipping cost, or tax. Open the listing for the shipping cost, and check tax at checkout. \`get_listing_details\` accepts a posh.mk short link. Behavior: read-only, no login, no purchases. Facebook may rate-limit repeated searches from one IP, and results for a query are cached for 90 seconds. A Kijiji location outside Canada returns Canada-wide results and says so. Location Ontario searches both Kijiji Ontario areas, not all of Canada. Kijiji search cards include the posted date and whether the seller is a dealer. Pass dealer false to drop dealer ads, or dealer true to keep only those. Pass shipping true to keep only ads that say they ship. Search cards usually omit that flag, and local delivery is not shipping. Whether an ad is wanted or for sale is on the listing, not the search card. Errors: a marketplace that fails returns success:false with the reason instead of throwing; an unknown marketplace name lists the valid ones; an empty result usually means the query was too specific, so widen the keywords or drop a price bound before concluding nothing exists. Not for: buying, messaging sellers, saved searches, or new-retail catalogs.`,
     annotations: { title: 'Search Marketplace', ...READ_ONLY },
     inputSchema: {
       type: 'object',
@@ -34,7 +34,7 @@ export const tools: AnnotatedTool[] = [
         },
         location: {
           type: 'string',
-          description: 'City and region. Facebook and Kijiji: "City, ST" in the US ("Austin, TX") or "City, PR" in Canada ("Toronto, ON", "Vancouver, BC"). Resolve neighborhoods, postal codes, metro areas and "near me" to a city and region before calling. A bare city name is ambiguous. Kijiji ignores a location it does not cover and searches Canada instead. For Poshmark Canada, pass marketplace "poshmark-ca". That search ignores the city. A Canadian location on marketplace "poshmark" also searches poshmark.ca when that marketplace is registered. Depop and eBay ignore location.',
+          description: 'City and region. Facebook and Kijiji: "City, ST" in the US ("Austin, TX") or "City, PR" in Canada ("Toronto, ON", "Vancouver, BC"). Resolve neighborhoods, postal codes, metro areas and "near me" to a city and region before calling. A bare city name is ambiguous. Kijiji ignores a location it does not cover and searches Canada instead. Kijiji treats Ontario as both of its Ontario areas, not as all of Canada. For Poshmark Canada, pass marketplace "poshmark-ca". That search ignores the city. A Canadian location on marketplace "poshmark" also searches poshmark.ca when that marketplace is registered. Depop and eBay ignore location.',
           default: 'san francisco'
         },
         radiusMiles: {
@@ -72,8 +72,7 @@ export const tools: AnnotatedTool[] = [
         },
         sort: {
           type: 'string',
-          description: 'Sort order (Depop, Poshmark, Kijiji). Options: relevance, newest, most_popular, price_low_to_high, price_high_to_low. Kijiji has no most_popular sort and ignores it.',
-          default: 'relevance'
+          description: 'Sort order. relevance and most_popular keep the marketplace order. price_low_to_high and price_high_to_low put listings without a numeric price last. newest uses the posted date and puts listings without one last. When sort is omitted, results are printed cheapest first, and listings without a numeric price still go last. Kijiji has no most_popular sort and ignores it.'
         },
         condition: {
           type: 'string',
@@ -100,6 +99,14 @@ export const tools: AnnotatedTool[] = [
           type: 'array',
           items: { type: 'string' },
           description: 'Filter by colors (Depop, Poshmark). Options: black, white, red, blue, green, yellow, orange, pink, purple, brown, grey, cream, multi, silver, gold',
+        },
+        dealer: {
+          type: 'boolean',
+          description: 'Kijiji only. true keeps dealer ads. false keeps owner ads. Other marketplaces ignore it.',
+        },
+        shipping: {
+          type: 'boolean',
+          description: 'Kijiji only. true keeps ads whose search card says the seller ships. Search cards usually omit that flag, so this can return nothing. Local delivery is not shipping. Other marketplaces ignore it.',
         }
       },
       required: ['query']
@@ -114,7 +121,7 @@ export const tools: AnnotatedTool[] = [
       properties: {
         listingId: {
           type: 'string',
-          description: 'The listing ID (from search results or a marketplace URL)'
+          description: 'The listing id from search results, a marketplace URL, or a posh.mk short link for Poshmark Canada'
         },
         marketplace: {
           type: 'string',

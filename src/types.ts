@@ -16,6 +16,11 @@ export interface Listing {
   condition?: string;
   brand?: string;
   size?: string;
+  postedAt?: string;
+  dealer?: boolean;
+  offerType?: 'offer' | 'wanted';
+  shipping?: boolean;
+  shippingCost?: string;
   marketplace: string;
   scrapedAt: string;
 }
@@ -42,6 +47,8 @@ export interface SearchParams {
   department?: string;
   sizes?: string[];
   colors?: string[];
+  dealer?: boolean;
+  shipping?: boolean;
 }
 
 export interface SearchResult {
@@ -65,6 +72,10 @@ export interface ListingDetails {
   seller?: string;
   deliveryTypes?: string[];
   isShippingOffered?: boolean;
+  postedAt?: string;
+  dealer?: boolean;
+  offerType?: 'offer' | 'wanted';
+  shippingCost?: string;
   url: string;
   unavailable?: ListingPart[];
 }

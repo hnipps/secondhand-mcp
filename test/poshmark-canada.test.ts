@@ -16,6 +16,7 @@ import {
   canadaSearchBody,
   canadaSearchUrl,
   detailsFromCanadaPost,
+  getPoshmarkCanadaDetails,
   isCanadianPoshmarkLocation,
   listingsFromCanadaPosts,
   PoshmarkCanadaMarketplace,
@@ -35,6 +36,7 @@ const POST = {
   size_obj: { display: 'M', id: 'M' },
   cover_shot: { url_small: 'https://img.example/small.jpg', url: 'https://img.example/full.jpg' },
   colors: [{ name: 'Green' }],
+  first_published_at: '2026-09-29T16:16:49-07:00',
 };
 
 describe('Canadian location detection', () => {
@@ -103,6 +105,7 @@ describe('Poshmark Canada listings', () => {
       size: 'M',
       marketplace: 'poshmark',
       scrapedAt,
+      postedAt: '2026-09-29T16:16:49-07:00',
     });
   });
 
@@ -194,7 +197,7 @@ describe('Poshmark Canada marketplace', () => {
     expect(result).toMatchObject({
       marketplace: 'poshmark-ca',
       success: true,
-      note: 'Poshmark Canada (poshmark.ca). Prices are CAD and items ship across Canada. The city does not narrow these results.',
+      note: 'Poshmark Canada (poshmark.ca). Prices are CAD and items ship across Canada. The city does not narrow these results. Search includes the post date. Shipping cost is on the listing, not the search. Tax is not included. Check it at checkout.',
     });
     expect(result.listings[0]).toMatchObject({
       marketplace: 'poshmark-ca',
@@ -211,8 +214,50 @@ describe('Poshmark Canada marketplace', () => {
       location: 'Canada',
       seller: 'closet',
       isShippingOffered: true,
+      postedAt: '2026-09-29T16:16:49-07:00',
       url: `https://poshmark.ca/listing/${POST.id}`,
     });
+  });
+
+  it('reads the shipping cost from the listing and not a tax amount', () => {
+    const details = detailsFromCanadaPost(
+      {
+        ...POST,
+        description: 'Soft wool coat.',
+        system_messages: [
+          { popup_id: 'seller-discount', message: 'Seller Discount: 20% off 4+ Bundle' },
+          { popup_id: 'poshmark-shipping', message: 'C$12.49 Expedited (1-7 day) Shipping on all orders' },
+        ],
+      },
+      POST.id
+    );
+    expect(details.shippingCost).toBe('C$12.49 Expedited (1-7 day) Shipping on all orders');
+    expect(JSON.stringify(details)).not.toMatch(/tax/i);
+  });
+
+  it('follows a posh.mk short link to the listing id', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push(String(url));
+      if (String(url).includes('posh.mk')) {
+        return { ok: true, url: 'https://poshmark.com/listing/Till-Next-Year-67400cf61ce666a4d259ef1e', status: 200 };
+      }
+      return { ok: true, json: async () => ({ ...POST, id: '67400cf61ce666a4d259ef1e' }) };
+    });
+
+    const details = await getPoshmarkCanadaDetails('https://posh.mk/vaBL0gLUIOb');
+    expect(calls[0]).toBe('https://posh.mk/vaBL0gLUIOb');
+    expect(calls[1]).toBe('https://poshmark.ca/vm-rest/posts/67400cf61ce666a4d259ef1e');
+    expect(details.id).toBe('67400cf61ce666a4d259ef1e');
+  });
+
+  it('rejects a short link that does not land on a listing id', async () => {
+    vi.stubGlobal('fetch', async () => ({ ok: true, url: 'https://www.poshmark.com/', status: 200 }));
+    await expect(getPoshmarkCanadaDetails('posh.mk/not-a-listing')).rejects.toThrow(/listing id is missing/);
+  });
+
+  it('says when a resolved short link is not a Canada listing', () => {
+    expect(() => detailsFromCanadaPost({ ...POST, origin_domain: 'us' }, POST.id)).toThrow(/not a Canada listing/);
   });
 });
 

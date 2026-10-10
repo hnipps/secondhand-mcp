@@ -26,6 +26,10 @@ interface RawListing {
   imageUrls?: string[];
   location?: { name?: string; address?: string };
   price?: RawPrice;
+  activationDate?: string;
+  type?: string;
+  posterInfo?: { posterId?: string };
+  flags?: { isFromDealer?: boolean | null; shippedBySeller?: boolean | null };
   attributes?: { all?: Array<{ canonicalName?: string; canonicalValues?: string[] }> };
 }
 
@@ -71,12 +75,22 @@ export function detailsFromHtml(html: string, id: string): ListingDetails {
   if (!raw?.url) throw new Error(`Kijiji listing ${id} was not on the page`);
   const images = raw.imageUrls ?? [];
   const description = raw.description?.trim();
+  const shipping = shippingFlag(raw);
+  const offerType = offerTypeOf(raw);
+  const dealer = dealerFlag(raw);
+  const postedAt = postedAtOf(raw);
+  const seller = apollo ? sellerName(apollo, raw) : undefined;
   return {
     id,
     description,
     images,
     location: placeName(raw),
     url: raw.url,
+    ...(seller ? { seller } : {}),
+    ...(postedAt ? { postedAt } : {}),
+    ...(dealer !== undefined ? { dealer } : {}),
+    ...(offerType ? { offerType } : {}),
+    ...(shipping !== undefined ? { isShippingOffered: shipping } : {}),
     unavailable: description ? undefined : ['description'],
   };
 }
@@ -119,6 +133,10 @@ function isListing(value: unknown): value is RawListing {
 
 function toListing(raw: RawListing, scrapedAt: string): Listing {
   const price = formatPrice(raw.price);
+  const postedAt = postedAtOf(raw);
+  const dealer = dealerFlag(raw);
+  const shipping = shippingFlag(raw);
+  const offerType = offerTypeOf(raw);
   return {
     id: raw.id ?? '',
     title: raw.title ?? '',
@@ -129,6 +147,10 @@ function toListing(raw: RawListing, scrapedAt: string): Listing {
     url: raw.url ?? `https://www.kijiji.ca/v-view-details/${raw.id}`,
     images: raw.imageUrls?.slice(0, 1),
     condition: conditionLabel(raw),
+    ...(postedAt ? { postedAt } : {}),
+    ...(dealer !== undefined ? { dealer } : {}),
+    ...(shipping !== undefined ? { shipping } : {}),
+    ...(offerType ? { offerType } : {}),
     marketplace: 'kijiji',
     scrapedAt,
   };
@@ -156,7 +178,49 @@ function formatAmount(amount: number): string {
 }
 
 function conditionLabel(raw: RawListing): string | undefined {
-  const value = raw.attributes?.all?.find((attribute) => attribute.canonicalName === 'condition')?.canonicalValues?.[0];
+  const value = attributeValues(raw, 'condition')[0];
   if (!value) return undefined;
   return CONDITION_LABEL[value] ?? value;
+}
+
+function attributeValues(raw: RawListing, name: string): string[] {
+  return raw.attributes?.all?.find((attribute) => attribute.canonicalName === name)?.canonicalValues ?? [];
+}
+
+function postedAtOf(raw: RawListing): string | undefined {
+  return typeof raw.activationDate === 'string' && raw.activationDate ? raw.activationDate : undefined;
+}
+
+function dealerFlag(raw: RawListing): boolean | undefined {
+  if (raw.flags?.isFromDealer === true) return true;
+  if (raw.flags?.isFromDealer === false) return false;
+  const by = attributeValues(raw, 'forsaleby');
+  if (by.includes('delr')) return true;
+  if (by.includes('ownr')) return false;
+  return undefined;
+}
+
+function shippingFlag(raw: RawListing): boolean | undefined {
+  const values = attributeValues(raw, 'shipping');
+  if (values.includes('true')) return true;
+  if (values.includes('false')) return false;
+  if (raw.flags?.shippedBySeller === true) return true;
+  return undefined;
+}
+
+function offerTypeOf(raw: RawListing): 'offer' | 'wanted' | undefined {
+  if (raw.type === 'OFFER') return 'offer';
+  if (raw.type === 'WANTED') return 'wanted';
+  return undefined;
+}
+
+function sellerName(apollo: ApolloState, raw: RawListing): string | undefined {
+  const id = raw.posterInfo?.posterId;
+  if (!id) return undefined;
+  for (const key of [`StandardProfileV2:${id}`, `CommercialProfileV2:${id}`]) {
+    const profile = apollo[key] as { name?: string } | undefined;
+    const name = profile?.name?.trim();
+    if (name) return name;
+  }
+  return undefined;
 }
