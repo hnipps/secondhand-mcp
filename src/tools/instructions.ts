@@ -7,6 +7,8 @@ Locations: Facebook Marketplace and Kijiji searches are local. Pass a US city an
 - a metro area ("the Bay Area", "the GTA"). Pick its principal city ("San Francisco, CA", "Toronto, ON").
 - somewhere outside the US and Canada. Pass the city and country as written. Facebook resolves those through its own search. Kijiji does not cover them and will say it searched Canada instead.
 
+Pass marketplace "poshmark-ca" to search Poshmark Canada. That search uses poshmark.ca, prices are CAD, and items ship across Canada, so the city does not narrow the results. It does not need Chrome. "poshmark" still searches poshmark.com, except that a Canadian location on "poshmark" also searches poshmark.ca when Chrome is installed and that marketplace is registered.
+
 Empty results usually mean the search was too narrow, not that nothing exists. Before telling the user there is nothing available, try the obvious widening: drop qualifiers from the query down to the item itself, remove price bounds, or search the nearest larger city. Say which of these you tried.
 
 Filters are not universal. Each parameter says which marketplaces apply it. Where one does not apply it is ignored, so do not describe results as filtered by something that marketplace never applied. Put those words in the query instead.

@@ -11,6 +11,7 @@
 import { BaseMarketplace } from './base.js';
 import { SearchParams, SearchResult, Listing, ListingDetails } from '../types.js';
 import { newPage, rotateBrowser, withBrowserLock } from '../browser.js';
+import { isCanadianPoshmarkLocation, searchPoshmarkCanada } from './poshmark-canada.js';
 import type { Page } from 'puppeteer-core';
 
 const MAX_RETRIES = 8;
@@ -69,6 +70,14 @@ export class PoshmarkMarketplace extends BaseMarketplace {
   }
 
   async search(params: SearchParams): Promise<SearchResult> {
+    if (isCanadianPoshmarkLocation(params.location)) {
+      const result = await searchPoshmarkCanada(params);
+      if (result.success && result.listings.length > 0) {
+        result.note = 'Poshmark Canada (poshmark.ca). Prices are CAD and items ship across Canada.';
+      }
+      return result;
+    }
+
     const { query, maxPrice, minPrice, limit = 48, sort, condition, category, brand, department, sizes, colors } = params;
 
     return withBrowserLock(async () => {

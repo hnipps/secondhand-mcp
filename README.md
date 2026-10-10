@@ -28,7 +28,8 @@ Works with Claude Desktop, Claude Code, Cursor, and other clients that run MCP s
 | Kijiji | No | Canadian classifieds. City and province, or all of Canada |
 | eBay | Yes (API keys) | Official Browse API. Set `EBAY_MARKETPLACE_ID` to `EBAY_CA` for ebay.ca |
 | Depop | No | Requires Chrome installed |
-| Poshmark | No | Requires Chrome installed |
+| Poshmark | No | US site. Requires Chrome installed |
+| Poshmark Canada | No | poshmark.ca. CAD, ships across Canada. No browser |
 
 ## Setup
 
@@ -96,7 +97,7 @@ By default all marketplaces are enabled. To limit which are active, set the `MAR
 }
 ```
 
-Valid values: `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`
+Valid values: `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, `poshmark-ca`
 
 ### eBay API Keys
 
@@ -142,7 +143,7 @@ Search for items across marketplaces.
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `query` | Yes | | Search terms |
-| `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, or `all` |
+| `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, `poshmark-ca`, or `all` |
 | `location` | No | `san francisco` | City for Facebook and Kijiji. US: `City, ST` (`Austin, TX`). Canada: `City, PR` (`Toronto, ON`, `Vancouver, BC`). Kijiji searches all of Canada when the place is not in Canada, and says so. |
 | `radiusMiles` | No | `25` | Search radius in miles, up to 500 (Facebook only) |
 | `maxPrice` | No | | Maximum price |
@@ -176,7 +177,7 @@ Get full details for a specific listing using an ID from search results.
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `listingId` | Yes | | Listing ID from search results |
-| `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, or `poshmark` |
+| `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, or `poshmark-ca` |
 
 **Data returned per marketplace:**
 
@@ -212,7 +213,9 @@ Useful for research-style clients that expect these standard tool names; for fil
 
 **Depop** uses a headless browser to search listings with support for category, condition, size, and color filters. The browser instance is shared across requests.
 
-**Poshmark** uses a headless browser to search listings with support for condition, size, color, sort, and price filters. Poshmark is not location-based. All items ship nationally.
+**Poshmark** uses a headless browser to search poshmark.com. It supports condition, size, color, sort, and price filters. A Canadian location on this marketplace searches poshmark.ca instead, but the marketplace is registered only when Chrome or Chromium is installed.
+
+**Poshmark Canada** (`poshmark-ca`) searches poshmark.ca without a browser. Prices are CAD. Items ship across Canada, so a city does not narrow the results. Pass `marketplace` as `poshmark-ca`.
 
 ## Development
 
@@ -235,7 +238,8 @@ npm run build
 - **Kijiji**: May break if Kijiji changes the search page. Covers Canada only.
 - **eBay**: Requires developer API keys (free tier available)
 - **Depop**: Requires Chrome/Chromium installed; slower than Facebook/eBay (~5s per search)
-- **Poshmark**: Requires Chrome/Chromium installed; no official API so relies on page scraping
+- **Poshmark**: US search requires Chrome/Chromium. No official API, so the US site is page scraping.
+- **Poshmark Canada**: No browser. May break if poshmark.ca changes `/vm-rest/posts`.
 - **Rate limiting**: Don't make too many requests too quickly
 
 ## License

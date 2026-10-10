@@ -7,6 +7,7 @@ import { FacebookMarketplace } from './facebook/index.js';
 import { EbayMarketplace } from './ebay/index.js';
 import { DepopMarketplace } from './depop.js';
 import { PoshmarkMarketplace } from './poshmark.js';
+import { PoshmarkCanadaMarketplace } from './poshmark-canada.js';
 import { KijijiMarketplace } from './kijiji/index.js';
 import { findChrome } from '../browser.js';
 
@@ -15,6 +16,7 @@ export { FacebookMarketplace } from './facebook/index.js';
 export { EbayMarketplace, resizeEbayImageUrl } from './ebay/index.js';
 export { DepopMarketplace } from './depop.js';
 export { PoshmarkMarketplace } from './poshmark.js';
+export { PoshmarkCanadaMarketplace } from './poshmark-canada.js';
 export { KijijiMarketplace } from './kijiji/index.js';
 
 // Registry of all available marketplaces
@@ -26,6 +28,7 @@ const allMarketplaces: Record<string, () => Marketplace> = {
   ebay: () => new EbayMarketplace(),
   depop: () => new DepopMarketplace(),
   poshmark: () => new PoshmarkMarketplace(),
+  'poshmark-ca': () => new PoshmarkCanadaMarketplace(),
   kijiji: () => new KijijiMarketplace(),
 };
 
