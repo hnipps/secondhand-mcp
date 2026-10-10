@@ -7,7 +7,9 @@ Locations: Facebook Marketplace and Kijiji searches are local. Pass a US city an
 - a metro area ("the Bay Area", "the GTA"). Pick its principal city ("San Francisco, CA", "Toronto, ON").
 - somewhere outside the US and Canada. Pass the city and country as written. Facebook resolves those through its own search. Kijiji does not cover them and will say it searched Canada instead.
 
-Pass marketplace "poshmark-ca" to search Poshmark Canada. That search uses poshmark.ca, prices are CAD, and items ship across Canada, so the city does not narrow the results. It does not need Chrome. "poshmark" still searches poshmark.com, except that a Canadian location on "poshmark" also searches poshmark.ca when Chrome is installed and that marketplace is registered.
+Pass marketplace "poshmark-ca" to search Poshmark Canada. That search uses poshmark.ca, prices are CAD, and items ship across Canada, so the city does not narrow the results. It does not need Chrome. Search results include the post date. They do not include a shipping cost or tax. Open the listing for the shipping cost, and check tax at checkout. A posh.mk short link works as the listing id. "poshmark" still searches poshmark.com, except that a Canadian location on "poshmark" also searches poshmark.ca when Chrome is installed and that marketplace is registered.
+
+Kijiji search cards include the posted date and whether the seller is a dealer. They do not say whether an ad is wanted or for sale. That is on the listing. Pass dealer as false to drop dealers. Pass shipping as true to keep only ads that say they ship. Search cards usually omit a shipping flag, and local delivery is not shipping. Location "Ontario" searches both Kijiji Ontario areas, not all of Canada.
 
 Empty results usually mean the search was too narrow, not that nothing exists. Before telling the user there is nothing available, try the obvious widening: drop qualifiers from the query down to the item itself, remove price bounds, or search the nearest larger city. Say which of these you tried.
 

@@ -1026,7 +1026,7 @@ describe('single-marketplace result formatting', () => {
     expect(text).not.toContain('📷');
   });
 
-  it('sorts a listing with no numeric price ahead of every priced one', async () => {
+  it('sorts a listing with no numeric price after every priced one', async () => {
     h.impl.facebook = {
       search: () =>
         ok('facebook', [
@@ -1037,10 +1037,37 @@ describe('single-marketplace result formatting', () => {
         ]),
     };
     const text = textOf(await call('search_marketplace', { query: 'chair' }));
-    const order = ['Free', 'Swap', 'Mid', 'Top'].map((t) => text.indexOf(t));
-    expect(Math.max(order[0], order[1])).toBeLessThan(order[2]);
-    expect(order[2]).toBeLessThan(order[3]);
+    const order = ['Mid', 'Top', 'Free', 'Swap'].map((t) => text.indexOf(t));
+    expect(order[0]).toBeLessThan(order[1]);
+    expect(order[1]).toBeLessThan(Math.min(order[2], order[3]));
     expect(order.every((i) => i >= 0)).toBe(true);
+  });
+
+  it('honors newest and does not treat a missing price as zero', async () => {
+    h.impl.facebook = {
+      search: () =>
+        ok('facebook', [
+          listing({ id: 'old', title: 'Old', priceNumeric: 10, postedAt: '2020-01-01T00:00:00.000Z' }),
+          listing({ id: 'new', title: 'New', priceNumeric: 90, postedAt: '2026-01-01T00:00:00.000Z' }),
+          listing({ id: 'contact', title: 'Contact', price: 'Contact', priceNumeric: undefined }),
+        ]),
+    };
+    const text = textOf(await call('search_marketplace', { query: 'chair', sort: 'newest' }));
+    const order = ['New', 'Old', 'Contact'].map((t) => text.indexOf(t));
+    expect(order[0]).toBeLessThan(order[1]);
+    expect(order[1]).toBeLessThan(order[2]);
+  });
+
+  it('keeps marketplace order for relevance', async () => {
+    h.impl.facebook = {
+      search: () =>
+        ok('facebook', [
+          listing({ id: 'pricey', title: 'Pricey', priceNumeric: 90 }),
+          listing({ id: 'cheap', title: 'Cheap', priceNumeric: 10 }),
+        ]),
+    };
+    const text = textOf(await call('search_marketplace', { query: 'chair', sort: 'relevance' }));
+    expect(text.indexOf('Pricey')).toBeLessThan(text.indexOf('Cheap'));
   });
 });
 
@@ -1078,7 +1105,7 @@ describe('all-marketplace result formatting', () => {
     expect(text).not.toContain('📷');
   });
 
-  it('sorts a listing with no numeric price ahead of every priced one', async () => {
+  it('sorts a listing with no numeric price after every priced one', async () => {
     h.impl.facebook = {
       search: () =>
         ok('facebook', [
@@ -1089,9 +1116,9 @@ describe('all-marketplace result formatting', () => {
         ]),
     };
     const text = textOf(await call('search_marketplace', { query: 'chair', marketplace: 'all' }));
-    const order = ['Free', 'Swap', 'Mid', 'Top'].map((t) => text.indexOf(t));
-    expect(Math.max(order[0], order[1])).toBeLessThan(order[2]);
-    expect(order[2]).toBeLessThan(order[3]);
+    const order = ['Mid', 'Top', 'Free', 'Swap'].map((t) => text.indexOf(t));
+    expect(order[0]).toBeLessThan(order[1]);
+    expect(order[1]).toBeLessThan(Math.min(order[2], order[3]));
     expect(order.every((i) => i >= 0)).toBe(true);
   });
 });

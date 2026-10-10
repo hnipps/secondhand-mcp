@@ -78,13 +78,25 @@ function slugFrom(url: string | undefined, id: number): string {
   return match?.[1] ?? String(id);
 }
 
-interface IndexedArea {
-  area: KijijiArea;
-  /** True when the query names this area, not a longer label that contains it. */
-  primary: boolean;
+export function matchKijijiArea(areas: KijijiArea[], query: string): KijijiArea | null {
+  const pool = areaPool(areas, query);
+  if (!pool) return null;
+  const leaves = pool.filter((area) => area.leaf);
+  const ids = new Set(pool.map((area) => area.id));
+  if (ids.size > 1 && leaves.length === 0) return null;
+  return shortest(pool);
 }
 
-export function matchKijijiArea(areas: KijijiArea[], query: string): KijijiArea | null {
+export function matchKijijiAreas(areas: KijijiArea[], query: string): KijijiArea[] {
+  const pool = areaPool(areas, query);
+  if (!pool) return [];
+  const leaves = pool.filter((area) => area.leaf);
+  const ids = new Set(pool.map((area) => area.id));
+  if (ids.size > 1 && leaves.length === 0) return uniqueAreas(pool);
+  return [shortest(pool)];
+}
+
+function areaPool(areas: KijijiArea[], query: string): KijijiArea[] | null {
   const { city, region } = splitPlaceQuery(query);
   const wanted = keyify(city);
   if (!wanted) return null;
@@ -92,18 +104,24 @@ export function matchKijijiArea(areas: KijijiArea[], query: string): KijijiArea 
   const indexed = areas.flatMap((area) => keysFor(area).map((entry) => ({ ...entry, area })));
   let hits = indexed.filter((entry) => entry.key === wanted);
   if (region) hits = hits.filter((entry) => entry.area.province === region);
-  return pick(hits);
-}
-
-function pick(hits: Array<IndexedArea & { key: string }>): KijijiArea | null {
   if (hits.length === 0) return null;
   const primary = hits.some((entry) => entry.primary) ? hits.filter((entry) => entry.primary) : hits;
   const leaves = primary.filter((entry) => entry.area.leaf);
   const pool = leaves.length > 0 ? leaves : primary;
-  const ids = new Set(pool.map((entry) => entry.area.id));
-  // Province buckets such as the two Ontario halves are not one search area.
-  if (ids.size > 1 && leaves.length === 0) return null;
-  return [...pool].sort((a, b) => a.area.name.length - b.area.name.length)[0].area;
+  return uniqueAreas(pool.map((entry) => entry.area));
+}
+
+function uniqueAreas(areas: KijijiArea[]): KijijiArea[] {
+  const seen = new Set<number>();
+  return areas.filter((area) => {
+    if (seen.has(area.id)) return false;
+    seen.add(area.id);
+    return true;
+  });
+}
+
+function shortest(areas: KijijiArea[]): KijijiArea {
+  return [...areas].sort((a, b) => a.name.length - b.name.length)[0];
 }
 
 function keysFor(area: KijijiArea): Array<{ key: string; primary: boolean }> {

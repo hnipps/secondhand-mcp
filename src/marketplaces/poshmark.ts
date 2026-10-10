@@ -73,7 +73,7 @@ export class PoshmarkMarketplace extends BaseMarketplace {
     if (isCanadianPoshmarkLocation(params.location)) {
       const result = await searchPoshmarkCanada(params);
       if (result.success && result.listings.length > 0) {
-        result.note = 'Poshmark Canada (poshmark.ca). Prices are CAD and items ship across Canada.';
+        result.note = 'Poshmark Canada (poshmark.ca). Prices are CAD and items ship across Canada. Tax is not included. Check it at checkout.';
       }
       return result;
     }

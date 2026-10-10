@@ -144,14 +144,16 @@ Search for items across marketplaces.
 |-----------|----------|---------|-------------|
 | `query` | Yes | | Search terms |
 | `marketplace` | No | `facebook` | `facebook`, `kijiji`, `ebay`, `depop`, `poshmark`, `poshmark-ca`, or `all` |
-| `location` | No | `san francisco` | City for Facebook and Kijiji. US: `City, ST` (`Austin, TX`). Canada: `City, PR` (`Toronto, ON`, `Vancouver, BC`). Kijiji searches all of Canada when the place is not in Canada, and says so. |
+| `location` | No | `san francisco` | City for Facebook and Kijiji. US: `City, ST` (`Austin, TX`). Canada: `City, PR` (`Toronto, ON`, `Vancouver, BC`). Kijiji searches all of Canada when the place is not in Canada, and says so. `Ontario` searches both Kijiji Ontario areas, not all of Canada. |
 | `radiusMiles` | No | `25` | Search radius in miles, up to 500 (Facebook only) |
 | `maxPrice` | No | | Maximum price |
 | `minPrice` | No | | Minimum price |
 | `limit` | No | `20` | Max results |
 | `showSold` | No | `false` | Include sold items (Facebook only) |
 | `includeImages` | No | `false` | Include image URLs in output |
-| `sort` | No | `relevance` | Sort order (Depop, Poshmark, Kijiji): `relevance`, `newest`, `most_popular`, `price_low_to_high`, `price_high_to_low`. Kijiji ignores `most_popular`. |
+| `sort` | No | cheapest first | Printed order. `relevance` and `most_popular` keep marketplace order. Price sorts put listings without a numeric price last. `newest` uses the posted date. When omitted, results are cheapest first, and unpriced listings still go last. Kijiji ignores `most_popular`. |
+| `dealer` | No | | Kijiji only. `true` keeps dealer ads. `false` keeps owner ads. |
+| `shipping` | No | | Kijiji only. `true` keeps ads that say they ship. Search cards usually omit that flag. Local delivery is not shipping. |
 | `condition` | No | | Item condition. eBay: `new`, `like_new`, `good`, `fair`. Depop: `new`, `like_new`, `excellent`, `good`, `fair`, `used`. Poshmark: `new` (NWT), `like_new` (NWOT), `good`, `fair` |
 | `category` | No | | Product category. Depop: `tops`, `bottoms`, `dresses`, `coats-jackets`, `footwear`, `accessories`, `bags`, `jewellery`, `activewear`, `swimwear`. Poshmark: `Jackets_&_Coats`, `Dresses`, `Shoes`, `Accessories`, etc. |
 | `brand` | No | | Brand filter (Poshmark only): e.g. `"Nike"`, `"Levi's"`, `"Gucci"` |
@@ -167,8 +169,10 @@ Search for items across marketplaces.
 | Price | Yes | Yes | Yes | Yes | Yes |
 | Location | City | City | City, State | — | — |
 | Condition | — | When the ad has one | Yes | — | — |
+| Posted date | — | Yes | — | — | Canada search |
+| Dealer | — | Yes | — | — | — |
 | Photo count | 1 thumbnail | 1 thumbnail | 1 thumbnail | 1 thumbnail | 1 thumbnail |
-| Seller | Yes | — | Yes | — | — |
+| Seller | Yes | Name is on the listing, not the search card | Yes | — | Canada search |
 
 ### `get_listing_details`
 
@@ -186,9 +190,11 @@ Get full details for a specific listing using an ID from search results.
 | Description | Yes | Yes | Yes | Yes | Yes |
 | All photos | Yes | Yes | Yes | Yes | Yes |
 | Location | City | City | City, State, Country | — | — |
-| Seller | Name | — | Username | Username | Username |
+| Seller | Name | Name | Username | Username | Username |
 | Delivery types | Yes | — | — | — | — |
-| Shipping | Yes/No | — | Service codes | Yes/No | Always included |
+| Shipping | Yes/No | Yes/No on the listing. Search cards rarely say | Service codes | Yes/No | Always included. Cost is on the listing |
+| Offer type | — | For sale or wanted, on the listing | — | — | — |
+| Posted date | — | Yes | — | — | Yes |
 
 ### `list_marketplaces`
 
@@ -207,7 +213,7 @@ Useful for research-style clients that expect these standard tool names; for fil
 
 **Facebook Marketplace** searches listings by location, radius, price, and query. City names in the US and Canada resolve offline. No login or browser needed. Facebook serves non-browser callers a gated version of its search API from time to time (a single result with more pages behind it, or stubs with no listing inside). When that happens the server reads the logged-out search page instead, which still carries a full first page of results.
 
-**Kijiji** searches kijiji.ca buy-and-sell ads. Pass a Canadian city and province, such as `Toronto, ON`. A place Kijiji does not cover, including the default San Francisco, returns Canada-wide results and a note that says so. Prices are Canadian dollars. No login or browser needed.
+**Kijiji** searches kijiji.ca buy-and-sell ads. Pass a Canadian city and province, such as `Toronto, ON`. A place Kijiji does not cover, including the default San Francisco, returns Canada-wide results and a note that says so. `Ontario` searches both Kijiji Ontario areas. Prices are Canadian dollars. Search cards include the posted date and a dealer flag. Whether an ad is wanted or for sale, the seller name, and whether it ships are on the listing. No login or browser needed.
 
 **eBay** uses the official eBay Browse API with OAuth 2.0 client credentials. Tokens are cached and auto-refreshed. The target regional marketplace is controlled by `EBAY_MARKETPLACE_ID` (default: `EBAY_US`). Use `EBAY_CA` for ebay.ca.
 
@@ -215,7 +221,7 @@ Useful for research-style clients that expect these standard tool names; for fil
 
 **Poshmark** uses a headless browser to search poshmark.com. It supports condition, size, color, sort, and price filters. A Canadian location on this marketplace searches poshmark.ca instead, but the marketplace is registered only when Chrome or Chromium is installed.
 
-**Poshmark Canada** (`poshmark-ca`) searches poshmark.ca without a browser. Prices are CAD. Items ship across Canada, so a city does not narrow the results. Pass `marketplace` as `poshmark-ca`.
+**Poshmark Canada** (`poshmark-ca`) searches poshmark.ca without a browser. Prices are CAD. Items ship across Canada, so a city does not narrow the results. Search results include the post date. They do not include a shipping cost or tax. Open the listing for the shipping cost, and check tax at checkout. A `posh.mk` short link works as the listing id. Pass `marketplace` as `poshmark-ca`.
 
 ## Development
 

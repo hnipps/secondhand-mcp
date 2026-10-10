@@ -22,6 +22,8 @@ interface SearchMarketplaceArgs {
   department?: string;
   sizes?: string[];
   colors?: string[];
+  dealer?: boolean;
+  shipping?: boolean;
 }
 
 export async function searchMarketplace(args: unknown): Promise<ToolResult> {
@@ -69,6 +71,8 @@ function readArgs(args: unknown): SearchMarketplaceArgs {
     department: stringArg(args, 'department'),
     sizes: stringListArg(args, 'sizes'),
     colors: stringListArg(args, 'colors'),
+    dealer: booleanArg(args, 'dealer'),
+    shipping: booleanArg(args, 'shipping'),
   };
 }
 
@@ -89,6 +93,8 @@ function toSearchParams(params: SearchMarketplaceArgs & { query: string }): Sear
     department: params.department,
     sizes: params.sizes,
     colors: params.colors,
+    ...(params.dealer !== undefined ? { dealer: params.dealer } : {}),
+    ...(params.shipping !== undefined ? { shipping: params.shipping } : {}),
   };
 }
 
